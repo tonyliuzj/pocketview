@@ -12,7 +12,10 @@ import Link from 'next/link';
 
 export default function AdminPage() {
   const [beszelUrl, setBeszelUrl] = useState('');
+  const [authMethod, setAuthMethod] = useState<'api_key' | 'password'>('api_key');
   const [beszelApiKey, setBeszelApiKey] = useState('');
+  const [beszelEmail, setBeszelEmail] = useState('');
+  const [beszelPassword, setBeszelPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [currentUsername, setCurrentUsername] = useState('');
@@ -49,7 +52,10 @@ export default function AdminPage() {
 
       if (data.configured) {
         setBeszelUrl(data.beszel_url);
-        setBeszelApiKey(data.beszel_api_key);
+        setAuthMethod(data.auth_method || 'api_key');
+        setBeszelApiKey(data.beszel_api_key || '');
+        setBeszelEmail(data.beszel_email || '');
+        setBeszelPassword(data.beszel_password || '');
       }
     } catch (error) {
       console.error('Error fetching config:', error);
@@ -70,7 +76,10 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           beszel_url: beszelUrl,
-          beszel_api_key: beszelApiKey,
+          auth_method: authMethod,
+          beszel_api_key: authMethod === 'api_key' ? beszelApiKey : undefined,
+          beszel_email: authMethod === 'password' ? beszelEmail : undefined,
+          beszel_password: authMethod === 'password' ? beszelPassword : undefined,
         }),
       });
 
@@ -197,7 +206,7 @@ export default function AdminPage() {
           <CardHeader>
             <CardTitle>Beszel Configuration</CardTitle>
             <CardDescription>
-              Configure your Beszel instance URL and API key to fetch system data
+              Configure your Beszel instance URL and authentication method
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -217,20 +226,84 @@ export default function AdminPage() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="beszel-api-key">Beszel API Key</Label>
-                <Input
-                  id="beszel-api-key"
-                  type="password"
-                  placeholder="Enter your Beszel API key"
-                  value={beszelApiKey}
-                  onChange={(e) => setBeszelApiKey(e.target.value)}
-                  required
-                />
-                <p className="text-sm text-muted-foreground">
-                  Your Beszel API authentication key
-                </p>
+              <div className="space-y-3">
+                <Label>Authentication Method</Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="auth-method"
+                      value="api_key"
+                      checked={authMethod === 'api_key'}
+                      onChange={(e) => setAuthMethod(e.target.value as 'api_key')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">API Key</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="auth-method"
+                      value="password"
+                      checked={authMethod === 'password'}
+                      onChange={(e) => setAuthMethod(e.target.value as 'password')}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">Email & Password</span>
+                  </label>
+                </div>
               </div>
+
+              {authMethod === 'api_key' && (
+                <div className="space-y-2">
+                  <Label htmlFor="beszel-api-key">Beszel API Key</Label>
+                  <Input
+                    id="beszel-api-key"
+                    type="password"
+                    placeholder="Enter your Beszel API key"
+                    value={beszelApiKey}
+                    onChange={(e) => setBeszelApiKey(e.target.value)}
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Your Beszel API authentication key
+                  </p>
+                </div>
+              )}
+
+              {authMethod === 'password' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="beszel-email">Email</Label>
+                    <Input
+                      id="beszel-email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={beszelEmail}
+                      onChange={(e) => setBeszelEmail(e.target.value)}
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Your Beszel account email
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="beszel-password">Password</Label>
+                    <Input
+                      id="beszel-password"
+                      type="password"
+                      placeholder="Enter your Beszel password"
+                      value={beszelPassword}
+                      onChange={(e) => setBeszelPassword(e.target.value)}
+                      required
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Your Beszel account password
+                    </p>
+                  </div>
+                </>
+              )}
 
               <Button type="submit" disabled={loading} className="w-full">
                 {loading ? 'Saving...' : 'Save Configuration'}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getConfig } from '@/lib/db';
+import { getConfig, getBeszelAuthHeaders } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { beszel_url, beszel_api_key } = config;
     const searchParams = request.nextUrl.searchParams;
     const systemId = searchParams.get('systemId');
 
@@ -23,11 +22,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${beszel_url}/api/systems/${systemId}/stats`, {
-      headers: {
-        'Authorization': `Bearer ${beszel_api_key}`,
-        'Content-Type': 'application/json',
-      },
+    const headers = await getBeszelAuthHeaders(config);
+
+    const response = await fetch(`${config.beszel_url}/api/systems/${systemId}/stats`, {
+      headers,
     });
 
     if (!response.ok) {
