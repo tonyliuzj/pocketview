@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, RefreshCw, Cpu, Activity, HardDrive, Server } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Cpu, Activity, HardDrive, Server, Clock, Network, Database, Gauge } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface SystemInfo {
@@ -44,7 +44,17 @@ interface HistoricalData {
   cpu: number;
   memory: number;
   disk: number;
+  diskRead?: number;
+  diskWrite?: number;
+  networkIn?: number;
+  networkOut?: number;
+  swap?: number;
+  loadAvg1?: number;
+  loadAvg5?: number;
+  loadAvg15?: number;
 }
+
+type TimeRange = '1h' | '6h' | '24h' | '7d' | '30d';
 
 export default function SystemDetailPage() {
   const params = useParams();
@@ -55,6 +65,15 @@ export default function SystemDetailPage() {
   const [historicalData, setHistoricalData] = useState<HistoricalData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>('24h');
+
+  const timeRangeOptions: { value: TimeRange; label: string; hours: number }[] = [
+    { value: '1h', label: '1 Hour', hours: 1 },
+    { value: '6h', label: '6 Hours', hours: 6 },
+    { value: '24h', label: '24 Hours', hours: 24 },
+    { value: '7d', label: '7 Days', hours: 168 },
+    { value: '30d', label: '30 Days', hours: 720 },
+  ];
 
   const fetchSystemData = async () => {
     try {
@@ -68,42 +87,95 @@ export default function SystemDetailPage() {
       const currentSystem = systems.find((s: System) => s.id === systemId);
 
       if (currentSystem) {
-        setSystem(currentSystem);
-
-        // Add current data point to historical data
-        if (currentSystem.info) {
-          const newDataPoint: HistoricalData = {
-            time: new Date().toLocaleTimeString(),
-            cpu: currentSystem.info.cpu || 0,
-            memory: currentSystem.info.mp || 0,
-            disk: currentSystem.info.dp || 0,
-          };
-
-          setHistoricalData((prev) => {
-            const updated = [...prev, newDataPoint];
-            // Keep only last 20 data points
-            return updated.slice(-20);
-          });
-        }
-      }
+        setSystem(currentSystem);}
     } catch (error) {
       console.error('Error fetching system data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistoricalData = async () => {
+    try {
+      const selectedRange = timeRangeOptions.find(r => r.value === timeRange);
+      if (!selectedRange) return;
+
+      const to = Date.now();
+      const from = to - (selectedRange.hours * 60 * 60 * 1000);
+
+      const response = await fetch(
+        `/api/beszel/stats?systemId=${systemId}&from=${from}&to=${to}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch historical data');
+      }
+
+      const data = await response.json();
+      
+      // Transform the system_stats collection response
+      if (data.items && Array.isArray(data.items)) {
+        const transformed = data.items.map((record: any) => {
+          // The stats field contains the actual metrics as JSON
+          const stats = typeof record.stats === 'string' ? JSON.parse(record.stats) : record.stats;
+          
+          // Calculate swap percentage if swap data is available
+          const swapPercent = stats.s && stats.su ? (stats.su / stats.s) * 100 : undefined;
+          
+          return {
+            time: new Date(record.created).toLocaleString(),
+            cpu: stats.cpu || stats.c || 0,
+            memory: stats.mp || stats.mem || stats.memory || 0,
+            disk: stats.dp || stats.disk || 0,
+            // Disk I/O (MB/s)
+            diskRead: stats.dr,
+            diskWrite: stats.dw,
+            // Network bandwidth (MB/s)
+            networkIn: stats.nr,
+            networkOut: stats.ns,
+            // Swap usage (percentage)
+            swap: swapPercent,
+            // Load average
+            loadAvg1: stats.la?.[0],
+            loadAvg5: stats.la?.[1],
+            loadAvg15: stats.la?.[2],
+          };
+        });
+        setHistoricalData(transformed);
+      }
+    } catch (error) {
+      console.error('Error fetching historical data:', error);
+    } finally {
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchSystemData();
-    const interval = setInterval(fetchSystemData, 5000); // Refresh every 5 seconds
-    return () => clearInterval(interval);
   }, [systemId]);
+
+  useEffect(() => {
+    fetchHistoricalData();
+    // Refresh historical data every 30 seconds
+    const interval = setInterval(fetchHistoricalData, 30000);
+    return () => clearInterval(interval);
+  }, [systemId, timeRange]);
 
   const handleRefresh = () => {
     setRefreshing(true);
     fetchSystemData();
+    fetchHistoricalData();
   };
+
+  const handleTimeRangeChange = (range: TimeRange) => {
+    setTimeRange(range);
+    setRefreshing(true);};
+
+  // Check if we have data for additional metrics
+  const hasDiskIO = historicalData.some(d => d.diskRead !== undefined || d.diskWrite !== undefined);
+  const hasNetwork = historicalData.some(d => d.networkIn !== undefined || d.networkOut !== undefined);
+  const hasSwap = historicalData.some(d => d.swap !== undefined);
+  const hasLoadAvg = historicalData.some(d => d.loadAvg1 !== undefined);
 
   if (loading) {
     return (
@@ -152,6 +224,31 @@ export default function SystemDetailPage() {
             Refresh
           </Button>
         </div>
+
+        {/* Time Range Selector */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Time Range
+            </CardTitle>
+            <CardDescription>Select the time range for historical data</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {timeRangeOptions.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={timeRange === option.value ? 'default' : 'outline'}
+                  onClick={() => handleTimeRangeChange(option.value)}
+                  disabled={refreshing}
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Status Card */}
         <Card className="mb-6">
@@ -250,18 +347,16 @@ export default function SystemDetailPage() {
         </div>
 
         {/* Historical Charts */}
-        {historicalData.length > 1 && (
+        {historicalData.length > 0 ? (
           <>
             {/* CPU Chart */}
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>CPU Usage Over Time</CardTitle>
-                <CardDescription>Real-time CPU usage percentage</CardDescription>
+                <CardDescription>Historical CPU usage percentage</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={historicalData}>
-                    <defs>
+                <ResponsiveContainer width="100%" height={300}><AreaChart data={historicalData}><defs>
                       <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
                         <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
@@ -281,7 +376,7 @@ export default function SystemDetailPage() {
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Memory Usage Over Time</CardTitle>
-                <CardDescription>Real-time memory usage percentage</CardDescription>
+                <CardDescription>Historical memory usage percentage</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -306,7 +401,7 @@ export default function SystemDetailPage() {
             <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Disk Usage Over Time</CardTitle>
-                <CardDescription>Real-time disk usage percentage</CardDescription>
+                <CardDescription>Historical disk usage percentage</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -327,6 +422,103 @@ export default function SystemDetailPage() {
               </CardContent>
             </Card>
 
+            {/* Disk I/O Chart */}
+            {hasDiskIO && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Disk I/O Over Time</CardTitle>
+                  <CardDescription>Disk read and write activity (MB/s)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="diskRead" stroke="#f59e0b" name="Read (MB/s)" strokeWidth={2} />
+                      <Line type="monotone" dataKey="diskWrite" stroke="#ef4444" name="Write (MB/s)" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Network Bandwidth Chart */}
+            {hasNetwork && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Network Bandwidth Over Time</CardTitle>
+                  <CardDescription>Network traffic (MB/s)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="networkIn" stroke="#10b981" name="Received (MB/s)" strokeWidth={2} />
+                      <Line type="monotone" dataKey="networkOut" stroke="#06b6d4" name="Sent (MB/s)" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Swap Usage Chart */}
+            {hasSwap && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Swap Usage Over Time</CardTitle>
+                  <CardDescription>Historical swap usage percentage</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={historicalData}>
+                      <defs>
+                        <linearGradient id="colorSwap" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="swap" stroke="#f97316" fillOpacity={1} fill="url(#colorSwap)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Load Average Chart */}
+            {hasLoadAvg && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Load Average Over Time</CardTitle>
+                  <CardDescription>System load average (1min, 5min, 15min)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={historicalData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="loadAvg1" stroke="#8b5cf6" name="1 min" strokeWidth={2} />
+                      <Line type="monotone" dataKey="loadAvg5" stroke="#a78bfa" name="5 min" strokeWidth={2} />
+                      <Line type="monotone" dataKey="loadAvg15" stroke="#c4b5fd" name="15 min" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Combined Chart */}
             <Card>
               <CardHeader>
@@ -344,18 +536,17 @@ export default function SystemDetailPage() {
                     <Line type="monotone" dataKey="cpu" stroke="#3b82f6" name="CPU %" strokeWidth={2} />
                     <Line type="monotone" dataKey="memory" stroke="#22c55e" name="Memory %" strokeWidth={2} />
                     <Line type="monotone" dataKey="disk" stroke="#a855f7" name="Disk %" strokeWidth={2} />
+                    {hasSwap && <Line type="monotone" dataKey="swap" stroke="#f97316" name="Swap %" strokeWidth={2} />}
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
           </>
-        )}
-
-        {historicalData.length <= 1 && (
+        ) : (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">
-                Collecting data... Charts will appear after gathering enough data points.
+                {refreshing ? 'Loading historical data...' : 'No historical data available for the selected time range.'}
               </p>
             </CardContent>
           </Card>

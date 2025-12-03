@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const systemId = searchParams.get('systemId');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
 
     if (!systemId) {
       return NextResponse.json(
@@ -24,7 +26,26 @@ export async function GET(request: NextRequest) {
 
     const headers = await getBeszelAuthHeaders(config);
 
-    const response = await fetch(`${config.beszel_url}/api/systems/${systemId}/stats`, {
+    // Build URL to query the system_stats collection
+    const url = new URL(`${config.beszel_url}/api/collections/system_stats/records`);
+    // Build filter for the specific system and time range
+    let filter = `system="${systemId}"`;
+    
+    if (from) {
+      const fromDate = new Date(parseInt(from)).toISOString();
+      filter += ` && created>="${fromDate}"`;
+    }
+    
+    if (to) {
+      const toDate = new Date(parseInt(to)).toISOString();
+      filter += ` && created<="${toDate}"`;
+    }
+    
+    url.searchParams.set('filter', filter);
+    url.searchParams.set('sort', 'created');
+    url.searchParams.set('perPage', '500'); // Adjust based on your needs
+
+    const response = await fetch(url.toString(), {
       headers,
     });
 
