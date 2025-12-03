@@ -14,7 +14,8 @@ export async function GET() {
 
     const headers = await getBeszelAuthHeaders(config);
 
-    const response = await fetch(`${config.beszel_url}/api/systems`, {
+    // Beszel uses PocketBase, so we need to use the PocketBase collections endpoint
+    const response = await fetch(`${config.beszel_url}/api/collections/systems/records`, {
       headers,
     });
 

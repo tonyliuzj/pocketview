@@ -181,23 +181,34 @@ export async function getBeszelAuthHeaders(config: Config): Promise<Record<strin
     headers['Authorization'] = `Bearer ${config.beszel_api_key}`;
   } else if (config.auth_method === 'password' && config.beszel_email && config.beszel_password) {
     // For password auth, we need to authenticate first and get a token
-    const authResponse = await fetch(`${config.beszel_url}/api/collections/users/auth-with-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        identity: config.beszel_email,
-        password: config.beszel_password,
-      }),
-    });
+    // Beszel uses PocketBase for authentication
+    try {
+      const authResponse = await fetch(`${config.beszel_url}/api/collections/users/auth-with-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identity: config.beszel_email,
+          password: config.beszel_password,
+        }),
+      });
 
-    if (!authResponse.ok) {
-      throw new Error(`Beszel authentication failed: ${authResponse.status} ${authResponse.statusText}`);
+      if (!authResponse.ok) {
+        const errorText = await authResponse.text();
+        throw new Error(`Beszel authentication failed: ${authResponse.status} ${authResponse.statusText}. ${errorText}`);
+      }
+
+      const authData = await authResponse.json();
+      if (authData.token) {
+        headers['Authorization'] = `Bearer ${authData.token}`;
+      } else {
+        throw new Error('Beszel authentication response missing token');
+      }
+    } catch (error) {
+      console.error('Beszel password authentication error:', error);
+      throw new Error(`Failed to authenticate with Beszel using password: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    const authData = await authResponse.json();
-    headers['Authorization'] = `Bearer ${authData.token}`;
   }
 
   return headers;

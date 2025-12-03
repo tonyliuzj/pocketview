@@ -154,61 +154,62 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {systems.map((system) => (
-              <Card key={system.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">{system.name}</CardTitle>
-                    <div className={`h-3 w-3 rounded-full ${
-                      system.status === 'online' ? 'bg-green-500' : 'bg-red-500'
-                    }`} />
-                  </div>
-                  <CardDescription>{system.host}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {system.info?.cpu !== undefined && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Cpu className="h-4 w-4 text-blue-500" />
-                          <span className="text-sm font-medium">CPU</span>
+              <Link key={system.id} href={`/system/${system.id}`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-xl">{system.name}</CardTitle>
+                      <div className={`h-3 w-3 rounded-full ${
+                        system.status === 'online' ? 'bg-green-500' : 'bg-red-500'
+                      }`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {system.info?.cpu !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Cpu className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-medium">CPU</span>
+                          </div>
+                          <span className="text-sm font-bold">{system.info.cpu.toFixed(1)}%</span>
                         </div>
-                        <span className="text-sm font-bold">{system.info.cpu.toFixed(1)}%</span>
-                      </div>
-                    )}
+                      )}
 
-                    {system.info?.mem !== undefined && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-green-500" />
-                          <span className="text-sm font-medium">Memory</span>
+                      {system.info?.mem !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-green-500" />
+                            <span className="text-sm font-medium">Memory</span>
+                          </div>
+                          <span className="text-sm font-bold">{system.info.mem.toFixed(1)}%</span>
                         </div>
-                        <span className="text-sm font-bold">{system.info.mem.toFixed(1)}%</span>
-                      </div>
-                    )}
+                      )}
 
-                    {system.info?.disk !== undefined && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <HardDrive className="h-4 w-4 text-purple-500" />
-                          <span className="text-sm font-medium">Disk</span>
+                      {system.info?.disk !== undefined && (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <HardDrive className="h-4 w-4 text-purple-500" />
+                            <span className="text-sm font-medium">Disk</span>
+                          </div>
+                          <span className="text-sm font-bold">{system.info.disk.toFixed(1)}%</span>
                         </div>
-                        <span className="text-sm font-bold">{system.info.disk.toFixed(1)}%</span>
-                      </div>
-                    )}
+                      )}
 
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Status</span>
-                        <span className={`font-semibold ${
-                          system.status === 'online' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {system.status.toUpperCase()}
-                        </span>
+                      <div className="pt-2 border-t">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Status</span>
+                          <span className={`font-semibold ${
+                            system.status === 'online' ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {system.status.toUpperCase()}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         )}
