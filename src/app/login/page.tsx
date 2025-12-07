@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Lock } from 'lucide-react';
+import { Lock, Server } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -73,58 +73,58 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-8">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Lock className="h-12 w-12 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">PocketView Login</CardTitle>
-          <CardDescription>
-            Enter your credentials to access the admin panel
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                autoComplete="username"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-          </form>
-
-          <div className="mt-6 p-4 bg-muted rounded-md">
-            <p className="text-sm text-muted-foreground text-center">
-              Default credentials:<br />
-              <span className="font-mono font-semibold">admin / changeme</span>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10 bg-muted/50">
+      <div className="w-full max-w-sm">
+         <Card className="w-full max-w-sm">
+            <CardHeader className="text-center">
+               <div className="flex justify-center mb-2">
+                  <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                     <Server className="size-6" />
+                  </div>
+               </div>
+               <CardTitle className="text-2xl">Login to PocketView</CardTitle>
+               <CardDescription>
+                  Enter your credentials below to access the admin panel
+               </CardDescription>
+            </CardHeader>
+            <CardContent>
+               <form onSubmit={handleLogin} className="grid gap-4">
+                  <div className="grid gap-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                     id="username"
+                     type="text"
+                     placeholder="admin"
+                     value={username}
+                     onChange={(e) => setUsername(e.target.value)}
+                     required
+                     autoComplete="username"
+                  />
+                  </div>
+                  <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                     id="password"
+                     type="password"
+                     placeholder="******"
+                     value={password}
+                     onChange={(e) => setPassword(e.target.value)}
+                     required
+                     autoComplete="current-password"
+                  />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Logging in...' : 'Login'}
+                  </Button>
+               </form>
+            </CardContent>
+            <CardFooter>
+               <div className="w-full text-center text-sm text-muted-foreground">
+                  Default: <span className="font-mono font-medium">admin / changeme</span>
+               </div>
+            </CardFooter>
+         </Card>
+      </div>
     </div>
   );
 }
