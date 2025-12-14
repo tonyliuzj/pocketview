@@ -214,12 +214,17 @@ export default function SystemDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{system.name}</h1>
-          <div className="flex items-center gap-2 mt-2">
-            <Badge variant={system.status === 'up' ? 'default' : 'destructive'} className={system.status === 'up' ? 'bg-green-500 hover:bg-green-600' : ''}>
-              {system.status === 'up' ? 'ONLINE' : 'OFFLINE'}
-            </Badge>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{system.name}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant={system.status === 'up' ? 'default' : 'destructive'} className={system.status === 'up' ? 'bg-green-500 hover:bg-green-600' : ''}>
+                {system.status === 'up' ? 'ONLINE' : 'OFFLINE'}
+              </Badge>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
