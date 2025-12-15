@@ -126,7 +126,7 @@ export default function SystemDetailPage() {
           const swapPercent = stats.s && stats.su ? (stats.su / stats.s) * 100 : undefined;
           
           return {
-            time: new Date(record.created).toLocaleString(),
+            time: record.created,
             cpu: stats.cpu || stats.c || 0,
             memory: stats.mp || stats.mem || stats.memory || 0,
             disk: stats.dp || stats.disk || 0,

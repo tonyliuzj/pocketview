@@ -26,8 +26,8 @@ interface System {
   status: string;
   info?: {
     cpu?: number;
-    mem?: number;
-    disk?: number;
+    mp?: number;  // memory percentage
+    dp?: number;  // disk percentage
   };
 }
 
@@ -236,11 +236,11 @@ export default function HomePage() {
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">MEM</p>
-                          <p className="font-bold text-lg">{system.info?.mem?.toFixed(0) || 0}%</p>
+                          <p className="font-bold text-lg">{system.info?.mp?.toFixed(0) || 0}%</p>
                         </div>
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground">DISK</p>
-                          <p className="font-bold text-lg">{system.info?.disk?.toFixed(0) || 0}%</p>
+                          <p className="font-bold text-lg">{system.info?.dp?.toFixed(0) || 0}%</p>
                         </div>
                       </div>
                     </CardContent>
@@ -293,8 +293,8 @@ export default function HomePage() {
                       </TableCell>
                       <TableCell className="font-medium">{system.name}</TableCell>
                       <TableCell>{system.info?.cpu?.toFixed(1) || 0}%</TableCell>
-                      <TableCell>{system.info?.mem?.toFixed(1) || 0}%</TableCell>
-                      <TableCell>{system.info?.disk?.toFixed(1) || 0}%</TableCell>
+                      <TableCell>{system.info?.mp?.toFixed(1) || 0}%</TableCell>
+                      <TableCell>{system.info?.dp?.toFixed(1) || 0}%</TableCell>
                       <TableCell className="text-right">
                         <Link href={`/system/${system.id}`}>
                           <Button variant="ghost" size="sm">View Details</Button>
