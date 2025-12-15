@@ -37,6 +37,7 @@ export default function HomePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [nextRefresh, setNextRefresh] = useState(5);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,6 +51,21 @@ export default function HomePage() {
       return () => clearInterval(interval);
     }
   }, [configured]);
+
+  useEffect(() => {
+    if (configured && !loading) {
+      setNextRefresh(5);
+      const countdown = setInterval(() => {
+        setNextRefresh((prev) => {
+          if (prev <= 1) {
+            return 5;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(countdown);
+    }
+  }, [configured, loading, refreshing]);
 
   const checkConfig = async () => {
     try {
@@ -168,6 +184,10 @@ export default function HomePage() {
           />
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Activity className="h-3 w-3" />
+            <span>Next refresh in {nextRefresh}s</span>
+          </div>
           <Button
             variant="outline"
             size="sm"

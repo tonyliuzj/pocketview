@@ -69,6 +69,7 @@ export default function SystemDetailPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>('24h');
+  const [nextRefresh, setNextRefresh] = useState(5);
 
   const timeRangeOptions: { value: TimeRange; label: string; hours: number }[] = [
     { value: '1h', label: '1 Hour', hours: 1 },
@@ -164,6 +165,21 @@ export default function SystemDetailPage() {
     return () => clearInterval(interval);
   }, [systemId, timeRange]);
 
+  useEffect(() => {
+    if (!loading) {
+      setNextRefresh(5);
+      const countdown = setInterval(() => {
+        setNextRefresh((prev) => {
+          if (prev <= 1) {
+            return 5;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(countdown);
+    }
+  }, [loading, refreshing, timeRange]);
+
   const handleRefresh = () => {
     setRefreshing(true);
     fetchSystemData();
@@ -228,6 +244,10 @@ export default function SystemDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Activity className="h-3 w-3" />
+            <span>Next refresh in {nextRefresh}s</span>
+          </div>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
