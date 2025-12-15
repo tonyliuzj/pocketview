@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Lock, Server } from 'lucide-react';
+import { Server } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -118,11 +118,6 @@ export default function LoginPage() {
                   </Button>
                </form>
             </CardContent>
-            <CardFooter>
-               <div className="w-full text-center text-sm text-muted-foreground">
-                  Default: <span className="font-mono font-medium">admin / changeme</span>
-               </div>
-            </CardFooter>
          </Card>
       </div>
     </div>
