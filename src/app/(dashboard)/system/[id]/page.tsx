@@ -72,8 +72,8 @@ export default function SystemDetailPage() {
   const [nextRefresh, setNextRefresh] = useState(5);
 
   const timeRangeOptions: { value: TimeRange; label: string; hours: number }[] = [
-    { value: '1h', label: '1 Hour', hours: 1 },
-    { value: '6h', label: '6 Hours', hours: 6 },
+    { value: '1h', label: '10 Minutes', hours: 10 / 60 },
+    { value: '6h', label: '1 Hour', hours: 1 },
     { value: '24h', label: '24 Hours', hours: 24 },
     { value: '7d', label: '7 Days', hours: 168 },
     { value: '30d', label: '30 Days', hours: 720 },
@@ -256,10 +256,26 @@ export default function SystemDetailPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="metrics">Historical Metrics</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between mb-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="metrics">Historical Metrics</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-muted-foreground">Time Range:</div>
+            {timeRangeOptions.map((option) => (
+              <Button
+                key={option.value}
+                variant={timeRange === option.value ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => handleTimeRangeChange(option.value)}
+                disabled={refreshing}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -325,39 +341,61 @@ export default function SystemDetailPage() {
               </CardHeader>
               <CardContent className="pl-2">
                 <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={historicalData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis 
-                        dataKey="time" 
-                        stroke="#888888" 
-                        fontSize={12} 
-                        tickLine={false} 
-                        axisLine={false}
-                        tickFormatter={(value) => {
-                          const date = new Date(value);
-                          return timeRange === '1h' || timeRange === '6h' 
-                            ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                            : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-                        }}
-                      />
-                      <YAxis 
-                        stroke="#888888" 
-                        fontSize={12} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tickFormatter={(value) => `${value}%`}
-                        domain={[0, 100]}
-                      />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                      />
-                      <Legend />
-                      <Line type="monotone" dataKey="cpu" stroke="#3b82f6" name="CPU" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="memory" stroke="#22c55e" name="Memory" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="disk" stroke="#a855f7" name="Disk" strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {historicalData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <div className="text-center">
+                        <p className="text-sm">No data available for the selected time range</p>
+                        <p className="text-xs mt-1">Data will appear as the system collects metrics</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={historicalData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="time"
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            if (timeRange === '1h' || timeRange === '6h') {
+                              return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            } else if (timeRange === '24h') {
+                              return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            } else {
+                              return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+                            }
+                          }}
+                        />
+                        <YAxis
+                          stroke="#888888"
+                          fontSize={12}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `${value}%`}
+                          domain={[0, 100]}
+                        />
+                        <Tooltip
+                          contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                          labelFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleString([], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+                          }}
+                        />
+                        <Legend />
+                        <Line type="monotone" dataKey="cpu" stroke="#3b82f6" name="CPU" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="memory" stroke="#22c55e" name="Memory" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="disk" stroke="#a855f7" name="Disk" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -395,61 +433,84 @@ export default function SystemDetailPage() {
         </TabsContent>
 
         <TabsContent value="metrics" className="space-y-4">
-          <div className="flex items-center justify-end space-x-2 pb-2">
-             <div className="text-sm text-muted-foreground mr-2">Time Range:</div>
-             {timeRangeOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={timeRange === option.value ? 'secondary' : 'ghost'}
-                  size="sm"
-                  onClick={() => handleTimeRangeChange(option.value)}
-                  disabled={refreshing}
-                >
-                  {option.label}
-                </Button>
-              ))}
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
                <CardHeader><CardTitle>CPU Usage</CardTitle></CardHeader>
                <CardContent className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={historicalData}>
-                       <defs>
-                          <linearGradient id="fillCpu" x1="0" y1="0" x2="0" y2="1">
-                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                          </linearGradient>
-                       </defs>
-                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                       <XAxis dataKey="time" hide />
-                       <YAxis domain={[0, 100]} />
-                       <Tooltip />
-                       <Area type="monotone" dataKey="cpu" stroke="#3b82f6" fill="url(#fillCpu)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {historicalData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <div className="text-center">
+                        <p className="text-sm">No data available</p>
+                        <p className="text-xs mt-1">Waiting for metrics</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={historicalData}>
+                         <defs>
+                            <linearGradient id="fillCpu" x1="0" y1="0" x2="0" y2="1">
+                               <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                               <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                         </defs>
+                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                         <XAxis dataKey="time" hide />
+                         <YAxis domain={[0, 100]} />
+                         <Tooltip
+                           labelFormatter={(value) => {
+                             const date = new Date(value);
+                             return date.toLocaleString([], {
+                               month: 'short',
+                               day: 'numeric',
+                               hour: '2-digit',
+                               minute: '2-digit'
+                             });
+                           }}
+                         />
+                         <Area type="monotone" dataKey="cpu" stroke="#3b82f6" fill="url(#fillCpu)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                </CardContent>
             </Card>
 
             <Card>
                <CardHeader><CardTitle>Memory Usage</CardTitle></CardHeader>
                <CardContent className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={historicalData}>
-                       <defs>
-                          <linearGradient id="fillMem" x1="0" y1="0" x2="0" y2="1">
-                             <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                          </linearGradient>
-                       </defs>
-                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                       <XAxis dataKey="time" hide />
-                       <YAxis domain={[0, 100]} />
-                       <Tooltip />
-                       <Area type="monotone" dataKey="memory" stroke="#22c55e" fill="url(#fillMem)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {historicalData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      <div className="text-center">
+                        <p className="text-sm">No data available</p>
+                        <p className="text-xs mt-1">Waiting for metrics</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={historicalData}>
+                         <defs>
+                            <linearGradient id="fillMem" x1="0" y1="0" x2="0" y2="1">
+                               <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                               <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                            </linearGradient>
+                         </defs>
+                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                         <XAxis dataKey="time" hide />
+                         <YAxis domain={[0, 100]} />
+                         <Tooltip
+                           labelFormatter={(value) => {
+                             const date = new Date(value);
+                             return date.toLocaleString([], {
+                               month: 'short',
+                               day: 'numeric',
+                               hour: '2-digit',
+                               minute: '2-digit'
+                             });
+                           }}
+                         />
+                         <Area type="monotone" dataKey="memory" stroke="#22c55e" fill="url(#fillMem)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                </CardContent>
             </Card>
 
@@ -457,17 +518,36 @@ export default function SystemDetailPage() {
               <Card>
                  <CardHeader><CardTitle>Disk I/O (MB/s)</CardTitle></CardHeader>
                  <CardContent className="h-[250px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={historicalData}>
-                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                         <XAxis dataKey="time" hide />
-                         <YAxis />
-                         <Tooltip />
-                         <Legend />
-                         <Line type="monotone" dataKey="diskRead" stroke="#f59e0b" name="Read" dot={false} />
-                         <Line type="monotone" dataKey="diskWrite" stroke="#ef4444" name="Write" dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {historicalData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <div className="text-center">
+                          <p className="text-sm">No data available</p>
+                          <p className="text-xs mt-1">Waiting for metrics</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={historicalData}>
+                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                           <XAxis dataKey="time" hide />
+                           <YAxis />
+                           <Tooltip
+                             labelFormatter={(value) => {
+                               const date = new Date(value);
+                               return date.toLocaleString([], {
+                                 month: 'short',
+                                 day: 'numeric',
+                                 hour: '2-digit',
+                                 minute: '2-digit'
+                               });
+                             }}
+                           />
+                           <Legend />
+                           <Line type="monotone" dataKey="diskRead" stroke="#f59e0b" name="Read" dot={false} />
+                           <Line type="monotone" dataKey="diskWrite" stroke="#ef4444" name="Write" dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
                  </CardContent>
               </Card>
             )}
@@ -476,17 +556,36 @@ export default function SystemDetailPage() {
               <Card>
                  <CardHeader><CardTitle>Network (MB/s)</CardTitle></CardHeader>
                  <CardContent className="h-[250px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={historicalData}>
-                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                         <XAxis dataKey="time" hide />
-                         <YAxis />
-                         <Tooltip />
-                         <Legend />
-                         <Line type="monotone" dataKey="networkIn" stroke="#10b981" name="Rx" dot={false} />
-                         <Line type="monotone" dataKey="networkOut" stroke="#06b6d4" name="Tx" dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {historicalData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <div className="text-center">
+                          <p className="text-sm">No data available</p>
+                          <p className="text-xs mt-1">Waiting for metrics</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={historicalData}>
+                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                           <XAxis dataKey="time" hide />
+                           <YAxis />
+                           <Tooltip
+                             labelFormatter={(value) => {
+                               const date = new Date(value);
+                               return date.toLocaleString([], {
+                                 month: 'short',
+                                 day: 'numeric',
+                                 hour: '2-digit',
+                                 minute: '2-digit'
+                               });
+                             }}
+                           />
+                           <Legend />
+                           <Line type="monotone" dataKey="networkIn" stroke="#10b981" name="Rx" dot={false} />
+                           <Line type="monotone" dataKey="networkOut" stroke="#06b6d4" name="Tx" dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
                  </CardContent>
               </Card>
             )}
@@ -495,18 +594,37 @@ export default function SystemDetailPage() {
                <Card>
                  <CardHeader><CardTitle>Load Average</CardTitle></CardHeader>
                  <CardContent className="h-[250px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={historicalData}>
-                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                         <XAxis dataKey="time" hide />
-                         <YAxis />
-                         <Tooltip />
-                         <Legend />
-                         <Line type="monotone" dataKey="loadAvg1" stroke="#8b5cf6" name="1m" dot={false} />
-                         <Line type="monotone" dataKey="loadAvg5" stroke="#a78bfa" name="5m" dot={false} />
-                         <Line type="monotone" dataKey="loadAvg15" stroke="#c4b5fd" name="15m" dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    {historicalData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <div className="text-center">
+                          <p className="text-sm">No data available</p>
+                          <p className="text-xs mt-1">Waiting for metrics</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={historicalData}>
+                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                           <XAxis dataKey="time" hide />
+                           <YAxis />
+                           <Tooltip
+                             labelFormatter={(value) => {
+                               const date = new Date(value);
+                               return date.toLocaleString([], {
+                                 month: 'short',
+                                 day: 'numeric',
+                                 hour: '2-digit',
+                                 minute: '2-digit'
+                               });
+                             }}
+                           />
+                           <Legend />
+                           <Line type="monotone" dataKey="loadAvg1" stroke="#8b5cf6" name="1m" dot={false} />
+                           <Line type="monotone" dataKey="loadAvg5" stroke="#a78bfa" name="5m" dot={false} />
+                           <Line type="monotone" dataKey="loadAvg15" stroke="#c4b5fd" name="15m" dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
                  </CardContent>
                </Card>
             )}
