@@ -116,16 +116,16 @@ export default function SystemDetailPage() {
       }
 
       const data = await response.json();
-      
+
       // Transform the system_stats collection response
       if (data.items && Array.isArray(data.items)) {
         const transformed = data.items.map((record: any) => {
           // The stats field contains the actual metrics as JSON
           const stats = typeof record.stats === 'string' ? JSON.parse(record.stats) : record.stats;
-          
+
           // Calculate swap percentage if swap data is available
           const swapPercent = stats.s && stats.su ? (stats.su / stats.s) * 100 : undefined;
-          
+
           return {
             time: record.created,
             cpu: stats.cpu || stats.c || 0,
@@ -146,9 +146,12 @@ export default function SystemDetailPage() {
           };
         });
         setHistoricalData(transformed);
+      } else {
+        setHistoricalData([]);
       }
     } catch (error) {
       console.error('Error fetching historical data:', error);
+      setHistoricalData([]);
     } finally {
       setRefreshing(false);
     }
